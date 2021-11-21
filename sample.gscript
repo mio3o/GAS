@@ -1,0 +1,98 @@
+// 〜〜定数〜〜
+// カレンダーID
+const myCalendar = CalendarApp.getCalendarById('takamitsu.0919.rad.o3o@gmail.com');
+// スプレッドシートID
+const spreadsheet = SpreadsheetApp.openById('1ngujzWhWuGutKJXJZWQh4-udpguxQONKLUzqVRTkMyA');
+// メインシート名
+const targetSheetName = 'sample1';
+// カレンダー登録フラグのある列
+const flagColumn = 'A';
+// 入力情報のある列の初めと終わり
+const startColumn = 'B';
+const endColumn = 'C';
+// コピー先シート名
+const copySheetName = 'sample2'
+// カレンダー日付登録列
+const registDateColumnNo = 0
+// カレンダー表題登録列
+const registColumnNo = 1
+// カレンダー登録テキスト
+const registText = 'と面談';
+
+// メイン処理
+function main(){
+  Logger.log('シート名：' + targetSheetName);
+  // シートの指定
+  var sheet = spreadsheet.getSheetByName(targetSheetName);
+
+  // 最終行の取得
+  var lastRow = sheet.getLastRow();
+  // 更新フラグ
+  var updateFlag = false;
+
+  // カレンダー未登録箇所を探し、登録
+  for (var i=1; i <= lastRow; i++){
+    // 値の初期化
+    var range = null;
+    var values = [];
+
+    // ターゲット行番号
+    var targetRow = String(i);
+
+    // カレンダー登録フラグのセル指定
+    var flagCell = sheet.getRange(flagColumn + targetRow);
+
+    // カレンダー登録フラグの有無を確認
+    if(flagCell.isBlank()){
+      // 指定するセルの範囲を取得
+      range = sheet.getRange(startColumn + targetRow + ':' + endColumn + targetRow);
+      // 値を取得する
+      values = range.getValues();
+      // カレンダーへ登録処理
+      registCalenderEvent(values);
+      // スプレッドシートの更新
+      updateSpreadsheet(i);
+      // スプレッドシートのコピー
+      copySpreadsheet(i, values);
+      updateFlag = true;
+    }
+  }
+
+  if(!updateFlag){
+    Logger.log('登録するデータがないため、処理を終了します');
+  }
+}
+
+// カレンダー登録処理
+function registCalenderEvent(values){
+  // 登録日付の変換
+  var startDate = new Date(values[0][registDateColumnNo]);
+  // 登録メッセージの作成
+  var message = values[0][registColumnNo] + registText;
+  // 予定登録
+  myCalendar.createAllDayEvent(message,startDate);
+
+  Logger.log(Utilities.formatDate(startDate, "GMT", "yyyy/MM/dd") + 'に「' + message + '」を登録しました');
+}
+
+// スプレッドシートの更新処理
+function updateSpreadsheet(targetRow) {
+    // 範囲の指定
+    var sheet = spreadsheet.getSheetByName(targetSheetName);
+    var cell = sheet.getRange(targetRow, 1);
+    cell.setValue("済")
+}
+
+// スプレッドシートのコピー処理
+function copySpreadsheet(targetRow, values) {
+    // シートの指定
+    var copySheet = spreadsheet.getSheetByName(copySheetName);
+    // 範囲の指定
+    var rowNum = values.length
+    var colNum = values[0].length
+    var cell = copySheet.getRange(targetRow, 1, rowNum, colNum);
+    // シートの内容をコピー
+    cell.setValues(values);
+
+    Logger.log(String(targetRow) + '行目のデータを' + copySheetName + 'へコピーしました'　)
+}
